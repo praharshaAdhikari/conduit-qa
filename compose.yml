@@ -1,4 +1,4 @@
-# The whole Conduit system on this machine: MySQL, the API and the web app.
+# The whole Conduit system on this machine: MySQL, a mail inbox, the API and the web app.
 # Expects conduit-api and conduit-web checked out next to this repo.
 #
 #   docker compose up --build -d --wait           start (builds both apps from source)
@@ -25,12 +25,22 @@ services:
       timeout: 3s
       retries: 40
 
+  # Catches every email the API sends and shows it at http://localhost:4025.
+  # Nothing is delivered to a real address.
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - '127.0.0.1:4025:8025'
+      - '127.0.0.1:4026:1025'
+
   # Applies the migrations, then starts.
   api:
     build: ../conduit-api
     depends_on:
       mysql:
         condition: service_healthy
+      mailpit:
+        condition: service_started
     ports:
       - '127.0.0.1:4000:4000'
     environment:
@@ -47,6 +57,8 @@ services:
       # The payment provider built into the API: no account, no network.
       PAYMENT_PROVIDER: fake
       FAKE_PAY_WEBHOOK_SECRET: local-only-not-a-secret
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
       # Lets the seed write to this database although it is not on localhost.
       SEED_DB_HOST: mysql
     healthcheck:

@@ -2,8 +2,8 @@
 
 The QA home of Conduit, a small blogging platform. It started as the
 [RealWorld](https://github.com/realworld-apps/realworld) spec (users, articles, comments, tags, follows,
-favorites) and adds roles and moderation, and paid memberships through a payment provider, on top. The
-system is three repos, checked out side by side:
+favorites) and adds roles and moderation, and paid memberships and tips through a payment provider, on
+top. The system is three repos, checked out side by side:
 
 | Repo | What it is |
 | --- | --- |
@@ -19,7 +19,7 @@ pipeline is planned and built, one layer at a time. [ROADMAP.md](ROADMAP.md) lis
 Needs Docker, and the three repos next to each other.
 
 ```sh
-docker compose up --build -d --wait           # MySQL, the API and the web app
+docker compose up --build -d --wait           # MySQL, a mail inbox, the API and the web app
 docker compose exec api npm run seed:built    # optional: demo users and articles
 ```
 
@@ -30,6 +30,7 @@ The seed can be run again at any time; it adds only what is missing.
 | Web app | http://localhost:4100 |
 | Moderation pages (moderators and admins) | http://localhost:4100/admin |
 | Membership page (when logged in) | http://localhost:4100/membership |
+| Mail inbox: every email the API sends | http://localhost:4025 |
 | API | http://localhost:4000/api |
 | API reference (Swagger) | http://localhost:4000/api/docs |
 | Health check | http://localhost:4000/api/health |
@@ -45,9 +46,17 @@ Demo logins after seeding, all with the password `password123`:
 | `dave@example.com` | A suspended user; his one article is hidden |
 | `erin@example.com` | A paying member; she can read alice's members-only article |
 
+The seed also leaves a paid tip to alice from a guest, `reader@example.com`, who has no account.
+
 The rules of the system are written down in the `conduit-api` README: "Rules the RealWorld spec leaves
-open", "Roles and moderation" and "Memberships and payments". Those sections are the specification to test
-against.
+open", "Roles and moderation", "Memberships and payments" and "Tips". Those sections are the specification
+to test against.
+
+## Email
+
+No email leaves this machine. The API sends everything to the mail inbox at http://localhost:4025, which
+shows each message and also has an API (`curl -s localhost:4025/api/v1/messages`). That is where the code
+for a guest's tip arrives, and the receipts.
 
 ## Payments
 
