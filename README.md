@@ -76,6 +76,16 @@ curl -s localhost:4000/api/fake-pay/events                                      
 curl -s -X POST localhost:4000/api/fake-pay/events/<id>/resend                  # deliver one again
 ```
 
+A webhook that is never delivered leaves the API out of step with the provider. The reconcile job puts
+that right, and also does what only the passing of time causes (ending an overdue membership, closing an
+abandoned checkout). It runs every night at 03:00 UTC; to run it now:
+
+```sh
+docker compose exec api npm run -s membership:reconcile:built    # prints the run's report
+```
+
+An admin can also run it from the moderation pages (Memberships).
+
 The full list, the delivery options and the webhook's signature are in the `conduit-api` README under "The
 fake payment provider". To use Stripe test mode instead, see "Stripe test mode" there and set the same
 three variables on the `api` service in `compose.yml`.
