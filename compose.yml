@@ -16,6 +16,9 @@ services:
       MYSQL_DATABASE: conduit
       MYSQL_USER: conduit
       MYSQL_PASSWORD: conduit
+    volumes:
+      # Named, so "docker compose down" keeps the data and "down -v" deletes it.
+      - mysql-data:/var/lib/mysql
     healthcheck:
       test: ['CMD-SHELL', 'mysql -h 127.0.0.1 -uconduit -pconduit -e "SELECT 1" conduit']
       interval: 3s
@@ -39,6 +42,11 @@ services:
       DB_PASSWORD: conduit
       DB_NAME: conduit
       JWT_SECRET: local-only-not-a-secret
+      # Customers are sent back to the web app after paying.
+      WEB_URL: http://localhost:4100
+      # The payment provider built into the API: no account, no network.
+      PAYMENT_PROVIDER: fake
+      FAKE_PAY_WEBHOOK_SECRET: local-only-not-a-secret
       # Lets the seed write to this database although it is not on localhost.
       SEED_DB_HOST: mysql
     healthcheck:
@@ -58,3 +66,6 @@ services:
         condition: service_healthy
     ports:
       - '127.0.0.1:4100:80'
+
+volumes:
+  mysql-data:

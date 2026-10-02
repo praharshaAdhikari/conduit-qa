@@ -2,7 +2,8 @@
 
 The QA home of Conduit, a small blogging platform. It started as the
 [RealWorld](https://github.com/realworld-apps/realworld) spec (users, articles, comments, tags, follows,
-favorites) and adds roles and moderation on top. The system is three repos, checked out side by side:
+favorites) and adds roles and moderation, and paid memberships through a payment provider, on top. The
+system is three repos, checked out side by side:
 
 | Repo | What it is |
 | --- | --- |
@@ -28,6 +29,7 @@ The seed can be run again at any time; it adds only what is missing.
 | --- | --- |
 | Web app | http://localhost:4100 |
 | Moderation pages (moderators and admins) | http://localhost:4100/admin |
+| Membership page (when logged in) | http://localhost:4100/membership |
 | API | http://localhost:4000/api |
 | API reference (Swagger) | http://localhost:4000/api/docs |
 | Health check | http://localhost:4000/api/health |
@@ -41,9 +43,33 @@ Demo logins after seeding, all with the password `password123`:
 | `mod@example.com` | A moderator: can suspend users and hide articles |
 | `admin@example.com` | An admin: a moderator who can also change roles |
 | `dave@example.com` | A suspended user; his one article is hidden |
+| `erin@example.com` | A paying member; she can read alice's members-only article |
 
-What each role may do, and what happens to suspended users and hidden articles, is written down in the
-`conduit-api` README under "Roles and moderation". That section is the specification to test against.
+The rules of the system are written down in the `conduit-api` README: "Rules the RealWorld spec leaves
+open", "Roles and moderation" and "Memberships and payments". Those sections are the specification to test
+against.
+
+## Payments
+
+Nothing has to be set up. The API uses its built-in fake payment provider, so paying for a membership works
+with no account and no network, and no money moves. The checkout page it shows has buttons to pay, to
+decline the card and to cancel, and lets you choose how the webhook is delivered: straight away, late,
+twice or never.
+
+What a real provider does on its own schedule can be done on request, with no login:
+
+```sh
+curl -s localhost:4000/api/fake-pay/subscriptions                                # find a subscription's id
+curl -s -X POST localhost:4000/api/fake-pay/subscriptions/<id>/renew            # the next period is paid
+curl -s -X POST localhost:4000/api/fake-pay/subscriptions/<id>/fail             # the renewal payment fails
+curl -s -X POST localhost:4000/api/fake-pay/subscriptions/<id>/end              # the subscription is over
+curl -s localhost:4000/api/fake-pay/events                                      # every webhook it produced
+curl -s -X POST localhost:4000/api/fake-pay/events/<id>/resend                  # deliver one again
+```
+
+The full list, the delivery options and the webhook's signature are in the `conduit-api` README under "The
+fake payment provider". To use Stripe test mode instead, see "Stripe test mode" there and set the same
+three variables on the `api` service in `compose.yml`.
 
 ```sh
 docker compose logs -f api    # follow the API's log
