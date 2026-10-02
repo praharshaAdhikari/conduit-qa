@@ -1,0 +1,60 @@
+# The whole Conduit system on this machine: MySQL, the API and the web app.
+# Expects conduit-api and conduit-web checked out next to this repo.
+#
+#   docker compose up --build -d --wait           start (builds both apps from source)
+#   docker compose exec api npm run seed:built    add the demo data
+#   docker compose down -v                        stop and delete the database
+#
+# Everything here is for local use only; the passwords are not secrets.
+services:
+  mysql:
+    image: mysql:8.0
+    ports:
+      - '127.0.0.1:4306:3306'
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: conduit
+      MYSQL_USER: conduit
+      MYSQL_PASSWORD: conduit
+    healthcheck:
+      test: ['CMD-SHELL', 'mysql -h 127.0.0.1 -uconduit -pconduit -e "SELECT 1" conduit']
+      interval: 3s
+      timeout: 3s
+      retries: 40
+
+  # Applies the migrations, then starts.
+  api:
+    build: ../conduit-api
+    depends_on:
+      mysql:
+        condition: service_healthy
+    ports:
+      - '127.0.0.1:4000:4000'
+    environment:
+      PORT: 4000
+      CORS_ORIGINS: http://localhost:4100
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: conduit
+      DB_PASSWORD: conduit
+      DB_NAME: conduit
+      JWT_SECRET: local-only-not-a-secret
+      # Lets the seed write to this database although it is not on localhost.
+      SEED_DB_HOST: mysql
+    healthcheck:
+      test: ['CMD', 'node', '-e', "fetch('http://localhost:4000/api/health').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+      interval: 3s
+      timeout: 3s
+      retries: 40
+
+  # The production build, served by nginx. The API URL is fixed at build time.
+  web:
+    build:
+      context: ../conduit-web
+      args:
+        API_URL: http://localhost:4000/api
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - '127.0.0.1:4100:80'
